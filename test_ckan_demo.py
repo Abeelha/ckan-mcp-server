@@ -24,10 +24,10 @@ async def demo_ckan_api():
         print("-" * 40)
         try:
             status = await client._make_request("GET", "status_show")
-            print("✅ API Connection successful!")
+            print("[OK] API Connection successful!")
             print(f"Site status: {json.dumps(status, indent=2)[:500]}...")
         except Exception as e:
-            print(f"❌ Status check failed: {str(e)}")
+            print(f"[ERROR] Status check failed: {str(e)}")
 
         # 2. List packages/datasets
         print("\n2. LISTING PACKAGES (First 5)")
@@ -41,7 +41,7 @@ async def demo_ckan_api():
             else:
                 print("No packages found")
         except Exception as e:
-            print(f"❌ Package list failed: {str(e)}")
+            print(f"[ERROR] Package list failed: {str(e)}")
 
         # 3. Search for packages
         print("\n3. SEARCHING FOR PACKAGES")
@@ -61,7 +61,7 @@ async def demo_ckan_api():
                     print(f"    Resources: {len(pkg.get('resources', []))} file(s)")
                     print(f"    Created: {pkg.get('metadata_created', 'N/A')[:10]}")
         except Exception as e:
-            print(f"❌ Package search failed: {str(e)}")
+            print(f"[ERROR] Package search failed: {str(e)}")
 
         # 4. List organizations
         print("\n4. LISTING ORGANIZATIONS")
@@ -75,7 +75,7 @@ async def demo_ckan_api():
             else:
                 print("No organizations found")
         except Exception as e:
-            print(f"❌ Organization list failed: {str(e)}")
+            print(f"[ERROR] Organization list failed: {str(e)}")
 
         # 5. List tags
         print("\n5. LISTING POPULAR TAGS")
@@ -86,11 +86,11 @@ async def demo_ckan_api():
                 print(f"Found {len(tags)} tags total")
                 print("Sample tags:")
                 for tag in tags[:15]:
-                    print(f"  • {tag}")
+                    print(f"  - {tag}")
             else:
                 print("No tags found")
         except Exception as e:
-            print(f"❌ Tag list failed: {str(e)}")
+            print(f"[ERROR] Tag list failed: {str(e)}")
 
         # 6. Show a specific package details (if any exist)
         print("\n6. PACKAGE DETAILS EXAMPLE")
@@ -120,7 +120,7 @@ async def demo_ckan_api():
             else:
                 print("No packages available for detailed view")
         except Exception as e:
-            print(f"❌ Package details failed: {str(e)}")
+            print(f"[ERROR] Package details failed: {str(e)}")
 
         print("\n" + "=" * 60)
         print("Demo complete!")
