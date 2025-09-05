@@ -22,8 +22,10 @@ from mcp.server import NotificationOptions, Server
 import mcp.server.stdio
 from dotenv import load_dotenv
 
+
 load_dotenv()
 os.environ["REQUESTS_CA_BUNDLE"] = certifi.where()
+# Configure logging
 logging.basicConfig(level=logging.INFO,filename="mcp-ckan-server.log")
 logger = logging.getLogger("mcp-ckan-server")
 class MCPErrorType(Enum):
@@ -56,6 +58,8 @@ class StandardResponse:
         return result
 
 class CKANAPIClient:
+    """CKAN API client for making HTTP requests"""
+
     def __init__(self, base_url: str, api_key: Optional[str] = None):
         self.base_url = base_url.rstrip('/')
         self.api_key = api_key
@@ -75,7 +79,7 @@ class CKANAPIClient:
     def _get_headers(self) -> Dict[str, str]:
         headers = {
             'Content-Type': 'application/json',
-            'User-Agent': 'MCP-CKAN-Server-Enhanced/2.0'
+            'User-Agent': 'MCP-CKAN-Server/1.0'
         }
         if self.api_key:
             headers['Authorization'] = self.api_key
@@ -166,7 +170,7 @@ class CKANAPIClient:
 
     async def get_related_datasets(self, dataset_id: str, relation_type: str = "tags",
                                   max_results: int = 10) -> List[Dict]:
-        
+
 
         source_dataset = await self._make_request("GET", f"package_show?id={dataset_id}")
 
@@ -202,7 +206,7 @@ class CKANAPIClient:
 
     async def check_data_quality(self, dataset_id: str, checks: List[str] = None,
                                 sample_size: int = 100) -> Dict:
-        
+
         if checks is None:
             checks = ["completeness", "format_validation", "schema_compliance"]
 
@@ -274,7 +278,7 @@ class CKANAPIClient:
 
     async def get_dataset_analytics(self, dataset_id: str = "all", time_range: Dict = None,
                                    metrics: List[str] = None) -> Dict:
-        
+
         if metrics is None:
             metrics = ["views", "downloads", "api_calls", "resource_count"]
 
@@ -326,7 +330,7 @@ class CKANAPIClient:
 
     async def preview_resource(self, resource_id: str, preview_rows: int = 10,
                               generate_stats: bool = True) -> Dict:
-        
+
         resource = await self._make_request("GET", f"resource_show?id={resource_id}")
 
         preview = {
@@ -363,7 +367,7 @@ class CKANAPIClient:
 
     async def export_metadata(self, dataset_ids: List[str], export_format: str = "dcat",
                             include_resources: bool = True) -> Dict:
-        
+
         exported_data = {
             "export_format": export_format,
             "timestamp": datetime.utcnow().isoformat(),
@@ -443,11 +447,12 @@ class CKANAPIClient:
 
 ckan_client = None
 
+# Initialize MCP server
 server = Server("ckan-mcp-server")
 
 @server.list_tools()
 async def handle_list_tools() -> List[types.Tool]:
-    
+    """List available CKAN API tools"""
     return [
         types.Tool(
             name="ckan_package_list",
@@ -728,7 +733,7 @@ async def handle_list_tools() -> List[types.Tool]:
 
 @server.call_tool()
 async def handle_call_tool(name: str, arguments: Optional[Dict[str, Any]]) -> List[types.TextContent]:
-    
+    """Handle tool calls to CKAN API"""
     if not ckan_client:
         error_response = StandardResponse(
             success=False,
@@ -883,7 +888,7 @@ async def handle_call_tool(name: str, arguments: Optional[Dict[str, Any]]) -> Li
 
 @server.list_resources()
 async def handle_list_resources() -> List[types.Resource]:
-    
+    """List available CKAN resources"""
     return [
         types.Resource(
             uri="ckan://api/docs",
@@ -907,9 +912,30 @@ async def handle_list_resources() -> List[types.Resource]:
 
 @server.read_resource()
 async def handle_read_resource(uri: str) -> str:
-    
+    """Read CKAN resources"""
     if uri == "ckan://api/docs":
-        return 
+        return """
+CKAN API Documentation Summary
+
+Base URL: Configure via CKAN_URL environment variable
+API Version: 3
+
+Key Endpoints:
+- package_list: Get all packages/datasets
+- package_show: Get package details
+- package_search: Search packages
+- organization_list: Get all organizations
+- organization_show: Get organization details
+- group_list: Get all groups
+- tag_list: Get all tags
+- resource_show: Get resource details
+- site_read: Get site information
+- status_show: Get site status
+
+Authentication: Set CKAN_API_KEY environment variable for write operations
+
+Full documentation: https://docs.ckan.org/en/latest/api/
+        """
     elif uri == "ckan://config":
         config = {
             "base_url": ckan_client.base_url if ckan_client else "Not configured",
@@ -924,14 +950,15 @@ async def handle_read_resource(uri: str) -> str:
         }
         return json.dumps(config, indent=2)
     elif uri == "ckan://enhanced/features":
-        return 
+        return
     else:
         raise Exception(f"Unknown resource: {uri}")
 
 async def main():
-    
+    """Main server function"""
     import os
 
+    # Initialize CKAN client
     ckan_url = os.getenv("CKAN_URL")
     if not ckan_url:
         logger.error("CKAN_URL environment variable not set")
@@ -942,17 +969,18 @@ async def main():
     global ckan_client
     ckan_client = CKANAPIClient(ckan_url, ckan_api_key)
 
+    # Start the CKAN client session
     await ckan_client.__aenter__()
 
     try:
-
+        # Run the MCP server
         async with mcp.server.stdio.stdio_server() as (read_stream, write_stream):
             await server.run(
                 read_stream,
                 write_stream,
                 InitializationOptions(
-                    server_name="ckan-mcp-server-enhanced",
-                    server_version="2.0.0",
+                    server_name="ckan-mcp-server",
+                    server_version="1.0.0",
                     capabilities=server.get_capabilities(
                         notification_options=NotificationOptions(),
                         experimental_capabilities={},
@@ -960,7 +988,7 @@ async def main():
                 ),
             )
     finally:
-
+        # Clean up CKAN client
         await ckan_client.__aexit__(None, None, None)
 
 if __name__ == "__main__":
